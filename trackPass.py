@@ -2,6 +2,7 @@ import argparse
 
 import os
 # limit the number of cpus used by high performance libraries
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
