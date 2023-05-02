@@ -44,7 +44,8 @@ from trackers.multi_tracker_zoo import create_tracker
 ####################################################
 class Team:
     def __init__(self):
-        self.location_list = [] # 각 선수 좌표 리스트
+        self.location_list = [] # 매 프레임 팀 좌표 리스트
+        self.all_location_list = [] # 경기중 모든 팀 좌표 리스트
         
     def setLocation(self, list):
         self.location_list.append(list) # 선수의 좌표 추가
@@ -69,6 +70,12 @@ class Team:
         
     def callLocation(self, index):
         return self.location_list[index]
+
+    def setAllLocation(self, list):
+        self.all_location_list.append(list)
+
+    def callAllLocation(self):
+        return self.all_location_list
 
 class Ball:          
     def __init__(self):
@@ -146,8 +153,8 @@ def run(
     beforeTeam = ""
     nowTeam = ""
 
-    team1_pass = 0
-    team2_pass = 0
+    team1_possession = 0
+    team2_possession = 0
 
     ####################################################
     ####################################################
@@ -349,9 +356,10 @@ def run(
 
                     Ball_X = (B_LeftX + B_RightX) / 2
                     Ball_Y = (B_UpY + B_DownY) / 2
+                    print(Ball_X, Ball_Y)
 
                     ballWidth = B_RightX - B_LeftX
-                    boundary = ballWidth / 2
+                    boundary = ballWidth
 
                     # yellow team 선수들의 좌표와 공의 좌표 비교
                     for index_1 in range(0,len(team1.location_list)):
@@ -367,45 +375,59 @@ def run(
                             print(LeftX, RightX, UpY, DownY)
                             nowTeam1 = "true"
                             nowTeam = "team1"
+                            team1.setAllLocation([LeftX, UpY, RightX, DownY])
 
-                    # blue team 선수들의 좌표와 공의 좌표 비교
+                    # red team 선수들의 좌표와 공의 좌표 비교
                     for index_2 in range(0,len(team2.location_list)):
                         # 선수 좌표 얻기
                         LeftX = team2.getLeftX(index_2)
                         RightX = team2.getRightX(index_2)
                         UpY = team2.getUpY(index_2)
                         DownY = team2.getDownY(index_2)
+
                         # 선수가 공을 가졌는지 판단
-                        if(LeftX-boundary < Ball_X and Ball_X < RightX+boundary) and (DownY-boundary < Ball_Y and Ball_Y < UpY+boundary):
+                        if(LeftX-boundary < Ball_X and Ball_X < RightX+boundary) and ( DownY-boundary < Ball_Y and Ball_Y < UpY+boundary):
                             print("Team2")
                             print(LeftX, RightX, UpY, DownY)
                             nowTeam2 = "true"
                             nowTeam = "team2"
+                            team2.setAllLocation([LeftX, UpY, RightX, DownY])
 
-                    if(not(nowTeam1 == "true" and nowTeam2 == "true")):
+                    if(not(nowTeam1 == "true" and nowTeam2 == "true") and (nowTeam1 == "true" or nowTeam2 == "true")):
                         print("===================")
                         print("nowTeam1:", nowTeam1)
                         print("nowTeam2:", nowTeam2)
                         print("===================")
+                        if(nowTeam == "team1"):
+                            team1_possession +=1
+                        elif(nowTeam == "team2"):
+                            team2_possession +=1
                        
-                        print("===================")
-                        print("before:", beforeTeam)
-                        print("now:", nowTeam)
-                        print("===================")
+                        # print("===================")
+                        # print("before:", beforeTeam)
+                        # print("now:", nowTeam)
+                        # print("===================")
 
                         # 이전 turn에서 공을 가진 팀과 현재 공을 가진 팀이 일치하면 pass count +1
-                        if(beforeTeam == nowTeam):
-                            if(nowTeam == "team1"):
-                                team1_pass +=1
-                            elif(nowTeam == "team2"):
-                                team2_pass +=1
+                        # if(beforeTeam == nowTeam):
+                        #     if(nowTeam == "team1"):
+                        #         team1_possession +=1
+                        #     elif(nowTeam == "team2"):
+                        #         team2_possession +=1
 
-                        beforeTeam = nowTeam # 이전 팀을 현재 팀으로 update
+                        # beforeTeam = nowTeam # 이전 팀을 현재 팀으로 update
                     
                     print("===============")
-                    print("team1Pass", team1_pass)
-                    print("team2Pass", team2_pass)
+                    print("team1_possession", team1_possession)
+                    print("team2_possession", team2_possession)
                     print("===============")
+
+                    print("===============")
+                    print("team1_all_location")
+                    print(team1.callAllLocation())
+                    print("===============")
+                    print("team2_all_location")
+                    print(team2.callAllLocation())
 
                     # 공과 팀 선수들의 좌표 리셋
                     team1.resetLocation()
@@ -413,6 +435,7 @@ def run(
                     ball.resetLocation()
                     nowTeam1 = ""
                     nowTeam2 = ""
+                    nowTeam = ""
                 else:
                     # 공과 팀 선수들의 좌표 리셋
                     team1.resetLocation()
