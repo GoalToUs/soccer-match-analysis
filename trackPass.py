@@ -13,6 +13,9 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
+from urllib import request
+from urllib.request import Request, urlopen
+ 
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 strongsort root directory
@@ -166,7 +169,8 @@ def run(
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
     webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
     if is_url and is_file:
-        source = check_file(source)  # download
+        request_site = Request(source, headers={"User-Agent": "Mozilla/5.0"})
+        source = urlopen(request_site).read()
 
     # Directories
     if not isinstance(yolo_weights, list):  # single yolo model
