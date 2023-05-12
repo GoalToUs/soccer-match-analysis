@@ -169,8 +169,7 @@ def run(
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
     webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
     if is_url and is_file:
-        request_site = Request(source, headers={"User-Agent": "Mozilla/5.0"})
-        source = urlopen(request_site).read()
+        source = check_file(source)  # download
 
     # Directories
     if not isinstance(yolo_weights, list):  # single yolo model
