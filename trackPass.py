@@ -13,6 +13,8 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
+
+import heatmapfunction as HF
  
 
 FILE = Path(__file__).resolve()
@@ -479,6 +481,13 @@ def run(
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
+
+    ############## 최종 결과 ###############
+    print("team1_possession result : ", team1_possession)
+    print("team2_possession result : ", team2_possession)
+    HF.heatmap("team1", team1.callAllLocation()) # team1 히트맵
+    HF.heatmap("team2", team2.callAllLocation()) # team2 히트맵
+    ################################################
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms {tracking_method} update per image at shape {(1, 3, *imgsz)}' % t)
     if save_txt or save_vid:
         s = f"\n{len(list(save_dir.glob('tracks/*.txt')))} tracks saved to {save_dir / 'tracks'}" if save_txt else ''

@@ -1,7 +1,7 @@
 from heatmappy import Heatmapper
 from PIL import Image
 
-def heatmap(team):
+def heatmap(teamName, team):
     example_img_path = 'C:/Users/ch061/PycharmProjects/pythonProject5/venv/groundteam1.jpg'
     example_img = Image.open(example_img_path)
 
@@ -29,4 +29,5 @@ def heatmap(team):
     # 이미지 위에 히트맵 그리기
     heatmap = heatmapper.heatmap_on_img(example_points, example_img)
     # 출력 이미지 경로 설정
-    heatmap.save('C:/Users/ch061/PycharmProjects/pythonProject5/venv/result.png')
+    
+    heatmap.save("C:\GoalToUS_yolov5\Deepsort\Yolov5_DeepSort\heatmapResult\heatmap_" + teamName + "_result.png");
