@@ -13,8 +13,6 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
-from urllib import request
-from urllib.request import Request, urlopen
  
 
 FILE = Path(__file__).resolve()
@@ -405,20 +403,6 @@ def run(
                             team1_possession +=1
                         elif(nowTeam == "team2"):
                             team2_possession +=1
-                       
-                        # print("===================")
-                        # print("before:", beforeTeam)
-                        # print("now:", nowTeam)
-                        # print("===================")
-
-                        # 이전 turn에서 공을 가진 팀과 현재 공을 가진 팀이 일치하면 pass count +1
-                        # if(beforeTeam == nowTeam):
-                        #     if(nowTeam == "team1"):
-                        #         team1_possession +=1
-                        #     elif(nowTeam == "team2"):
-                        #         team2_possession +=1
-
-                        # beforeTeam = nowTeam # 이전 팀을 현재 팀으로 update
                     
                     print("===============")
                     print("team1_possession", team1_possession)
