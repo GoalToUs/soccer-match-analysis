@@ -153,7 +153,6 @@ def run(
     nowTeam1 = ""
     nowTeam2 = ""
 
-    beforeTeam = ""
     nowTeam = ""
 
     team1_possession = 0
@@ -279,10 +278,10 @@ def run(
                     location.append(int(c[2])) # 오른쪽 x
                     location.append(int(c[3])) # 아래쪽 y
 
-                    # yello team일 때
+                    # team1일 때
                     if(cls == 0):
                         team1.setLocation(location)
-                    # blue team일 때
+                    # team2일 때
                     elif(cls == 1):
                         team2.setLocation(location)
                     # ball일 때
