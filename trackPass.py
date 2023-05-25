@@ -482,8 +482,9 @@ def run(
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
 
     ############## 최종 결과 ###############
-    print("team1_possession result : ", team1_possession)
-    print("team2_possession result : ", team2_possession)
+    teamAll_possession = team1_possession + team2_possession
+    print("team1_possession result : ", team1_possession/teamAll_possession)
+    print("team2_possession result : ", team2_possession/teamAll_possession)
     HF.heatmap("team1", team1.callAllLocation()) # team1 히트맵
     HF.heatmap("team2", team2.callAllLocation()) # team2 히트맵
     ################################################
