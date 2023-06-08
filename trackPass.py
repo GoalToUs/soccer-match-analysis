@@ -2,7 +2,6 @@ import argparse
 
 import os
 # limit the number of cpus used by high performance libraries
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -14,6 +13,9 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
+
+import heatmapfunction as HF
+ 
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 strongsort root directory
@@ -43,66 +45,68 @@ from trackers.multi_tracker_zoo import create_tracker
 ####################################################
 ############## My COde : 선수, 공 객체 ##############
 ####################################################
-class Person:
+class Team:
     def __init__(self):
-        self.person_list = []
-        self.location_list = []
+        self.location_list = [] # 매 프레임 팀 좌표 리스트
+        self.all_location_list = [] # 경기중 모든 팀 좌표 리스트
         
-    def setLocation(self, index, list):
-        self.person_list.append(index)
-        self.location_list.append(list)
+    def setLocation(self, list):
+        self.location_list.append(list) # 선수의 좌표 추가
 
-    def changeLocation(self, index, list):
-        self.location_list[self.person_list.index(index)] = list
+    def resetLocation(self):
+        self.location_list = [] # 좌표 리셋
 
-    def print(self):
-        print(self.person_list)
+    def printLocation(self):
         print(self.location_list)
 
     def getLeftX(self, index):
-        return self.location_list[self.person_list.index(index)][0]
+        return self.location_list[index][0]
 
     def getRightX(self, index):
-        return self.location_list[self.person_list.index(index)][2]
+        return self.location_list[index][2]
 
     def getUpY(self, index):
-        return self.location_list[self.person_list.index(index)][3]
+        return self.location_list[index][3]
 
     def getDownY(self, index):
-        return self.location_list[self.person_list.index(index)][1]
+        return self.location_list[index][1]
         
     def callLocation(self, index):
-        return self.location_list[self.person_list.index(index)]
+        return self.location_list[index]
+
+    def setAllLocation(self, list):
+        self.all_location_list.append(list)
+
+    def callAllLocation(self):
+        return self.all_location_list
 
 class Ball:          
     def __init__(self):
-        self.ball_index = -1
         self.location = []
                             
-    def setLocation(self, index, list):
-        self.ball_index = index
-        self.location = list
-        
-    def changeLocation(self, list):
-        self.location = list
-        
+    def setLocation(self, list):
+        self.location.append(list) # 현재 위치
+
+    def resetLocation(self):
+        self.location = [] # 좌표 리셋
+    
     def getLeftX(self):
-        return self.location[0]
+        return self.location[0][0]
 
     def getRightX(self):
-        return self.location[2]
+        return self.location[0][2]
 
     def getUpY(self):
-        return self.location[3]
+        return self.location[0][3]
 
     def getDownY(self):
-        return self.location[1]
+        return self.location[0][1]
 
-    def callLocation(self):
-        print(self.ball_index)
+    def printLocation(self):
         print(self.location)
 
-person = Person()
+team1 = Team()
+team2 = Team()
 ball = Ball()
 
 ####################################################
@@ -142,21 +146,26 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
-    pass_count = 0
-    oldPlayer = ""
-    nowPlayer = ""
+    ####################################################
+    ####################################################
+    ####################################################
 
-    # def get_video_from_url(self):
-    #     # url에서 새 비디오 스트리밍 객체 생성
-    #     play = pafy.new(self._URL).streams[-1]
-    #     assert play is not None
-    #     return cv2.VideoCapture(play.url)
+    nowTeam1 = ""
+    nowTeam2 = ""
 
+    nowTeam = ""
+
+    team1_possession = 0
+    team2_possession = 0
+
+    ####################################################
+    ####################################################
+    ####################################################
 
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (VID_FORMATS)
-    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://')) or source.lower().endswith(('.mp4'))
+    is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
     webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
     if is_url and is_file:
         source = check_file(source)  # download
@@ -255,13 +264,41 @@ def run(
                     tracker_list[i].tracker.camera_update(prev_frames[i], curr_frames[i])
 
             if det is not None and len(det):
+
+                ####################################################
+                ############## My Code : 객체 좌표 얻기 #############
+                ####################################################     
+                
+                for c in det:
+                    cls = int(c[5]) # 클래스
+         
+                    location = []                      
+                    location.append(int(c[0])) # 왼쪽 x
+                    location.append(int(c[1])) # 위쪽 y
+                    location.append(int(c[2])) # 오른쪽 x
+                    location.append(int(c[3])) # 아래쪽 y
+
+                    # team1일 때
+                    if(cls == 0):
+                        team1.setLocation(location)
+                    # team2일 때
+                    elif(cls == 1):
+                        team2.setLocation(location)
+                    # ball일 때
+                    elif(cls == 2):
+                        ball.setLocation(location)
+
+                ####################################################
+                ####################################################
+                #################################################### 
+
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()  # xyxy
 
                 # Print results
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
-                    # s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to strin
+                    s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # pass detections to strongsort
                 t4 = time_sync()
@@ -270,44 +307,11 @@ def run(
                 dt[3] += t5 - t4
 
                 # draw boxes for visualization
-                if len(outputs[i]) > 0:
+                if len(det) > 0:
                     for j, (output, conf) in enumerate(zip(outputs[i], det[:, 4])):
-    
                         bboxes = output[0:4]
-
-                        ####################################################
-                        ############## My Code : 객체 좌표 얻기 #############
-                        ####################################################
-                        id = int(output[4])
-                        cls = int(output[5])
-
-                        s = f"class: {names[int(cls)]} Id : {id} "
-                       
-                        index = id-1
-                        # LOGGER.info(f'{s}')
-
-                        location = []
-                        location.append(int(det[index][0])) # 왼쪽 x
-                        location.append(int(det[index][1])) # 위쪽 y
-                        location.append(int(det[index][2])) # 오른쪽 x
-                        location.append(int(det[index][3])) # 아래쪽 y                        
-
-                        #사람일 때
-                        if(cls == 0):               
-                            if id in person.person_list: 
-                                person.changeLocation(id, location)
-                            else:
-                                person.setLocation(id, location)
-                        #공일 때
-                        elif(cls == 32):
-                            if ball.ball_index == -1:
-                                ball.setLocation(id, location)
-                            else:
-                                ball.changeLocation(location)
-
-                        ####################################################
-                        ####################################################
-                        ####################################################                            
+                        id = output[4]
+                        cls = output[5]
 
                         if save_txt:
                             # to MOT format
@@ -333,72 +337,102 @@ def run(
                 ####################################################
                 ############# My Code : PASS DETECTION #############
                 ####################################################
-                person_list = person.person_list
-                
-                # P1 : 왼쪽 사람, P2 : 오른쪽 사람
-                if(len(person_list) > 0):
-                    P1 = person.getLeftX(1)
-                    P2 = person.getLeftX(2)
 
-                    if(P1 < P2):
-                        left = 1
-                        right = 2
-                    elif(P2 < P1):
-                        left = 2
-                        right = 1
+                # 인식한 공이 하나일 때만 취급
+                if(len(ball.location) == 1):
+                    # 공과 팀 선수들의 위치 출력
+                    print("===================")
+                    print("Ball")
+                    ball.printLocation()
+                    print("Team1")
+                    team1.printLocation()
+                    print("Team2")
+                    team2.printLocation()
+                    print("===================")
 
-                    P1_LeftX = person.getLeftX(left)
-                    P1_RightX = person.getRightX(left)
-                    P1_UpY = person.getUpY(left)
-                    P1_DownY = person.getDownY(left)
-
-                    P2_LeftX = person.getLeftX(right)
-                    P2_RightX = person.getRightX(right)
-                    P2_UpY = person.getUpY(right)
-                    P2_DownY = person.getDownY(right)
-                    print("왼쪽 선수 : ", P1_LeftX, P1_RightX, P1_DownY, P1_UpY) # 왼쪽 사람 좌표
-                    print("오른쪽 선수 : ", P2_LeftX, P2_RightX, P2_DownY, P2_UpY) # 오른쪽 사람 좌표
-
-                if(ball.ball_index != -1):
+                    # 저장해둔 공 좌표 얻기
                     B_LeftX = ball.getLeftX()
                     B_RightX = ball.getRightX()
                     B_UpY = ball.getUpY()
                     B_DownY = ball.getDownY()
-                    print("공 : ",B_LeftX, B_RightX, B_DownY, B_UpY) # 공 좌표
-                    
+
+                    Ball_X = (B_LeftX + B_RightX) / 2
+                    Ball_Y = (B_UpY + B_DownY) / 2
+                    print(Ball_X, Ball_Y)
+
                     ballWidth = B_RightX - B_LeftX
-                    middleLine = (P2_LeftX + P1_RightX)/2
-                    Boundary = (2* ballWidth) /3
+                    boundary = ballWidth
 
-                if(len(person_list) > 0) and (ball.ball_index != -1):
-                    #왼쪽 사람이 가짐
-                    if((P1_LeftX < B_LeftX and B_LeftX < P1_RightX + Boundary)  or ((P1_LeftX - Boundary < B_RightX and B_RightX < P1_RightX)) and (P1_DownY < B_DownY and B_DownY < P1_UpY) and (B_RightX < middleLine)):
-                        nowPlayer = "left"
+                    # yellow team 선수들의 좌표와 공의 좌표 비교
+                    for index_1 in range(0,len(team1.location_list)):
+                        # 선수 좌표 얻기
+                        LeftX = team1.getLeftX(index_1)
+                        RightX = team1.getRightX(index_1)
+                        UpY = team1.getUpY(index_1)
+                        DownY = team1.getDownY(index_1)
+
+                        # 선수가 공을 가졌는지 판단
+                        if(LeftX-boundary < Ball_X and Ball_X < RightX+boundary) and (DownY-boundary < Ball_Y and Ball_Y < UpY+boundary):
+                            print("Team1")
+                            print(LeftX, RightX, UpY, DownY)
+                            nowTeam1 = "true"
+                            nowTeam = "team1"
+                            team1.setAllLocation([LeftX, UpY, RightX, DownY])
+
+                    # red team 선수들의 좌표와 공의 좌표 비교
+                    for index_2 in range(0,len(team2.location_list)):
+                        # 선수 좌표 얻기
+                        LeftX = team2.getLeftX(index_2)
+                        RightX = team2.getRightX(index_2)
+                        UpY = team2.getUpY(index_2)
+                        DownY = team2.getDownY(index_2)
+
+                        # 선수가 공을 가졌는지 판단
+                        if(LeftX-boundary < Ball_X and Ball_X < RightX+boundary) and ( DownY-boundary < Ball_Y and Ball_Y < UpY+boundary):
+                            print("Team2")
+                            print(LeftX, RightX, UpY, DownY)
+                            nowTeam2 = "true"
+                            nowTeam = "team2"
+                            team2.setAllLocation([LeftX, UpY, RightX, DownY])
+
+                    if(not(nowTeam1 == "true" and nowTeam2 == "true") and (nowTeam1 == "true" or nowTeam2 == "true")):
+                        print("===================")
+                        print("nowTeam1:", nowTeam1)
+                        print("nowTeam2:", nowTeam2)
+                        print("===================")
+                        if(nowTeam == "team1"):
+                            team1_possession +=1
+                        elif(nowTeam == "team2"):
+                            team2_possession +=1
                     
-                    #오른쪽 사람이 가짐
-                    if((P2_LeftX < B_LeftX and B_LeftX < P2_RightX + Boundary)  or ((P2_LeftX - Boundary < B_RightX and B_RightX < P2_RightX)) and (P2_DownY < B_DownY and B_DownY < P2_UpY) and (B_LeftX > middleLine)):
-                        nowPlayer = "right"
+                    print("===============")
+                    print("team1_possession", team1_possession)
+                    print("team2_possession", team2_possession)
+                    print("===============")
 
-                
+                    print("===============")
+                    print("team1_all_location")
+                    print(team1.callAllLocation())
+                    print("===============")
+                    print("team2_all_location")
+                    print(team2.callAllLocation())
 
-
-                ####################################################
-                ############## My Code : PRINT RESULT ##############
-                ####################################################
-
-                print("before : ", oldPlayer)
-                print("now : ", nowPlayer)
-                print("=======pass_count======")
-                if(oldPlayer != "" and oldPlayer != nowPlayer):
-                    pass_count += 1
-                print(pass_count)
-                print("=======================")
-                oldPlayer = nowPlayer #이번에 가지고 있던 사람 저장
-               
-                ############ 터미널 출력 ################
-                # LOGGER.info(f'{s}')
-                # LOGGER.info(f'{s}Done. yolo:({t3 - t2:.3f}s), {tracking_method}:({t5 - t4:.3f}s)')
-
+                    # 공과 팀 선수들의 좌표 리셋
+                    team1.resetLocation()
+                    team2.resetLocation()
+                    ball.resetLocation()
+                    nowTeam1 = ""
+                    nowTeam2 = ""
+                    nowTeam = ""
+                else:
+                    # 공과 팀 선수들의 좌표 리셋
+                    team1.resetLocation()
+                    team2.resetLocation()
+                    ball.resetLocation()
+                    nowTeam1 = ""
+                    nowTeam2 = ""
+            
+                LOGGER.info(f'{s}Done. yolo:({t3 - t2:.3f}s), {tracking_method}:({t5 - t4:.3f}s)')
             else:
                 #strongsort_list[i].increment_ages()
                 LOGGER.info('No detections')
@@ -427,26 +461,33 @@ def run(
                         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer[i].write(im0)
-            # if save_vid:
-            #     if vid_path[i] != save_path:  # new video
-            #         vid_path[i] = save_path
-            #         if isinstance(vid_writer[i], cv2.VideoWriter):
-            #             vid_writer[i].release()  # release previous video writer
-            #         if vid_cap:  # video
-            #             fps = vid_cap.get(cv2.CAP_PROP_FPS)
-            #             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            #             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            #         else:  # stream
-            #             fps, w, h = 30, im0.shape[1], im0.shape[0]
-            #         save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
-            #         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-            #     vid_writer[i].write(im0)
+            if save_vid:
+                if vid_path[i] != save_path:  # new video
+                    vid_path[i] = save_path
+                    if isinstance(vid_writer[i], cv2.VideoWriter):
+                        vid_writer[i].release()  # release previous video writer
+                    if vid_cap:  # video
+                        fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                        w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    else:  # stream
+                        fps, w, h = 30, im0.shape[1], im0.shape[0]
+                    save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+                    vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                vid_writer[i].write(im0)
 
             prev_frames[i] = curr_frames[i]
 
     # Print results
-    print("pass_count : ", pass_count)
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
+
+    ############## 최종 결과 ###############
+    teamAll_possession = team1_possession + team2_possession
+    print("team1_possession result : ", team1_possession/teamAll_possession)
+    print("team2_possession result : ", team2_possession/teamAll_possession)
+    HF.heatmap("team1", team1.callAllLocation()) # team1 히트맵
+    HF.heatmap("team2", team2.callAllLocation()) # team2 히트맵
+    ################################################
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms {tracking_method} update per image at shape {(1, 3, *imgsz)}' % t)
     if save_txt or save_vid:
         s = f"\n{len(list(save_dir.glob('tracks/*.txt')))} tracks saved to {save_dir / 'tracks'}" if save_txt else ''
