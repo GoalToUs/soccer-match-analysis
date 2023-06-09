@@ -30,7 +30,7 @@ pip install -r requirements.txt
 python trackPass.py --source [영상경로] --classes 0 32
 ```
 
-### 2. 경기 분석 : 히트맵<br>
+### 2. 경기 분석 : 히트맵 ⚽<br>
 사용 기술 : OpenCV<br>
 
 #### Algorithm
@@ -42,5 +42,5 @@ python trackPass.py --source [영상경로] --classes 0 32
 python heatmapfunction.py
 ```
 
-### 3. 볼 소유율과 히트맵을 통한 피드백 도출 예시
+### 3. 볼 소유율과 히트맵을 통한 피드백 도출 예시 📉
 볼 소유율이 높더라도 히트맵이 팀 골대 주변으로 분포하고 있으면 수비 위주로 경기가 진행되었다는 걸 알 수 있고, 따라서 공격 전술에 대한 논의가 필요하다는 결론을 낼 수 있다.
