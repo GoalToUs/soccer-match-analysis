@@ -1,4 +1,15 @@
-## 핵심기술
+# 풋살 경기 자동 분석 - 볼 소유율, 히트맵
+## 💭 About
+
+
+## ✨ Developer
+| <img src="https://user-images.githubusercontent.com/86764406/210495754-7e4222f9-24bd-4b0b-9a00-c1d406b7dce0.png" width="200" height="200"/> | <img src="https://avatars.githubusercontent.com/u/97084864?v=4" width="200" height="200" /> |
+| :---: | :---: |
+| <div align = "center"><b>재민</b></div> | <div align = "center"><b>서현</b></div> |
+| [@HwangJaemin49](https://github.com/HwangJaemin49) | [@seobbang](https://github.com/seobbang) |
+| 히트맵 구현 | 볼 소유율 구현|
+
+## 💙 핵심기술
 ### 0. 실행 환경 세팅🛠
 #### 1) 아나콘다 설치
 #### 2) 가상 환경 설치
